@@ -34,17 +34,14 @@ yarn-error.log*
 # Claude Code MCP configuration (contains API keys)
 .mcp.json
 
-# Ignore agent-specific project files (agent-agnostic)
-.agents/projects/**
-!.agents/projects/keep.md
-!.agents/projects/pr-descriptions/
-.agents/projects/pr-descriptions/**
-!.agents/projects/pr-descriptions/keep.md
+# OAT local state
+.oat/config.local.json
+.oat/projects/local/
+.oat/ideas/
 
 # Ignore claude instructions
 CLAUDE.md
 .claude/*
-!.claude/commands/
 !.claude/skills/
 
 .conductor

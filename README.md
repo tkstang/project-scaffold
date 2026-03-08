@@ -30,6 +30,11 @@ git init
 # Install dependencies (hooks are auto-installed)
 pnpm install
 
+# Initialize Open Agent Toolkit (use `npx oat` if not installed globally)
+oat init --scope project
+oat tools install
+oat sync --scope all
+
 # Verify everything works
 pnpm lint
 pnpm type-check
@@ -56,8 +61,8 @@ pnpm build
 - **Git Hooks**: Pre-commit linting, commit message validation, pre-push checks
 - **CI Workflow**: GitHub Actions for lint, type-check, and build on PRs
 - **Editor Config**: VSCode settings with Biome as default formatter
-- **AI Assistants**: Claude Code and Cursor configurations with custom commands
-- **Project Tracking**: `.agents/` system for multi-session development documentation
+- **AI Assistants**: Open Agent Toolkit (OAT) with Claude, Cursor, and Codex provider sync
+- **Project Tracking**: OAT project lifecycle for structured multi-session development
 
 ### Requirements
 
@@ -103,13 +108,7 @@ This file provides guidance to Claude Code when working with this repository.
 2. The CI workflow will automatically run on PRs to `main`
 3. Optionally update `.github/PULL_REQUEST_TEMPLATE.md` for your team
 
-### 4. Optional: Update Jira/GitHub URLs
-
-If you use Jira or want specific GitHub URLs in PR description templates, update:
-- `.cursor/rules/pr-description-rules.mdc` - Replace `your-org.atlassian.net`
-- `.claude/commands/create-pr.md` - Replace example URLs
-
-### 5. Optional: Customize TypeScript Config
+### 4. Optional: Customize TypeScript Config
 
 The `tsconfig.json` includes strict settings. Adjust if needed:
 
@@ -123,7 +122,7 @@ The `tsconfig.json` includes strict settings. Adjust if needed:
 }
 ```
 
-### 6. Optional: Add Path Aliases
+### 5. Optional: Add Path Aliases
 
 To use path aliases like `@/utils`:
 
@@ -304,63 +303,66 @@ The `manage-hooks.js` script creates symlinks from `.git/hooks/` to `tools/git-h
 
 ## AI Assistant Integration
 
-This scaffold includes configurations for both Claude Code and Cursor AI assistants.
+This scaffold uses **Open Agent Toolkit (OAT)** for AI assistant integration across multiple providers.
 
-### Claude Code (`.claude/`)
+### How It Works
 
-**Settings** (`.claude/settings.json`):
+- **Canonical skills** live in `.agents/skills/` — the single source of truth
+- **Provider sync** via `oat sync --scope all` generates provider-specific views (`.claude/skills/`, `.cursor/skills/`, etc.)
+- **Supported providers**: Claude Code, Cursor, Codex
+
+### Project Lifecycle
+
+OAT provides structured skills for multi-session development:
+
+| Skill | Purpose |
+|-------|---------|
+| `oat-project-new` | Start a new project with discovery/planning phases |
+| `oat-project-quick-start` | Quick-start a project with minimal setup |
+| `oat-project-open` | Resume an existing project |
+| `oat-project-progress` | Check project progress and status |
+| `oat-project-pr-final` | Generate a comprehensive PR description |
+
+Projects are stored in `.oat/projects/` with structured artifacts.
+
+### Local Path Management
+
+OAT manages **local-only paths** — directories that are gitignored but need to persist locally (and sync to worktrees). Common examples:
+
+- `.oat/ideas/` — project-level idea brainstorming
+- `.oat/projects/**/reviews` — review artifacts scoped to specific projects
+
+Configure them in `.oat/config.json`:
+
 ```json
 {
-  "respectGitignore": false
+  "version": 1,
+  "localPaths": [
+    ".oat/ideas",
+    ".oat/projects/**/reviews"
+  ]
 }
 ```
-Allows Claude to access the `.agents/` directory for project context.
 
-**Custom Commands:**
-- `/start-agent-project` - Initialize a new project with discovery/planning/implementation workflow
-- `/create-pr` - Generate comprehensive PR descriptions
+Then apply to `.gitignore`:
 
-### Cursor (`.cursor/`)
-
-**Rules** (`.cursor/rules/`):
-- `pr-description-rules.mdc` - Guidelines for creating detailed PR descriptions
-
-**Commands:**
-Same as Claude Code commands in `.cursor/commands/`.
-
-### Agent Project Workflow (`.agents/`)
-
-A system for tracking multi-session development work:
-
-```
-.agents/
-├── scripts/
-│   └── new-agent-project.ts    # Scaffolding tool
-└── projects/
-    └── <project-name>/
-        ├── discovery.md        # Requirements gathering
-        ├── planning.md         # Implementation planning
-        └── implementation.md   # Progress tracking
-```
-
-**Creating a New Agent Project:**
 ```bash
-npx tsx .agents/scripts/new-agent-project.ts my-feature
+oat local apply             # Write managed .gitignore section for local paths
+oat local status            # Check which paths exist and are gitignored
+oat local add <path>        # Add a new local path
+oat local remove <path>     # Remove a local path
 ```
 
-Or use the Claude/Cursor command: `/start-agent-project`
+When using git worktrees, `oat local sync <worktree-path>` copies local paths between the main repo and worktrees automatically.
 
-**Workflow Phases:**
+### Key Commands
 
-1. **Discovery** - Gather requirements, identify constraints, ask clarifying questions
-2. **Planning** - Design implementation approach, document architecture decisions
-3. **Implementation** - Track progress, log decisions, note deviations from plan
-
-**Benefits:**
-- Maintains context across coding sessions
-- Rich context for PR descriptions
-- Agent-agnostic (works with any AI assistant)
-- Kept local (gitignored by default)
+```bash
+oat init --scope project    # Initialize OAT in a new project
+oat tools install           # Install/update skill packs
+oat sync --scope all        # Sync skills to all providers
+oat status --scope all      # Check sync status
+```
 
 ---
 
@@ -431,15 +433,15 @@ jobs:
 │       ├── commit-msg            # Validate commit message
 │       ├── pre-push              # Full lint before push
 │       └── post-checkout         # Auto-install deps
-├── .agents/                      # AI project documentation
-│   ├── scripts/                  # Tooling
-│   └── projects/                 # Project-specific docs
+├── .agents/                      # OAT canonical skills & agents
+│   ├── skills/                   # Skill definitions (source of truth)
+│   └── agents/                   # Agent definitions
+├── .oat/                         # OAT local state (mostly gitignored)
 ├── .claude/                      # Claude Code config
 │   ├── settings.json
-│   └── commands/
+│   └── skills/                   # OAT-synced skills (auto-generated)
 ├── .cursor/                      # Cursor AI config
-│   ├── rules/
-│   └── commands/
+│   └── skills/                   # OAT-synced skills (auto-generated)
 ├── .github/
 │   ├── workflows/ci.yml          # CI pipeline
 │   └── PULL_REQUEST_TEMPLATE.md
@@ -452,7 +454,8 @@ jobs:
 ├── .nvmrc                        # Node version
 ├── package.json
 ├── pnpm-lock.yaml
-├── CLAUDE.md                     # AI assistant context
+├── AGENTS.md                     # Agent instructions (OAT skills discovery)
+├── CLAUDE.md                     # Claude Code context (references AGENTS.md)
 └── README.md                     # This file
 ```
 
