@@ -13,6 +13,7 @@ A modern TypeScript project scaffold with pre-configured tooling for linting, fo
 - [AI Assistant Integration](#ai-assistant-integration)
 - [CI/CD Pipeline](#cicd-pipeline)
 - [Project Structure](#project-structure)
+- [Promote to Turborepo Monorepo](#promote-to-turborepo-monorepo)
 
 ---
 
@@ -458,6 +459,226 @@ jobs:
 ├── CLAUDE.md                     # Claude Code context (references AGENTS.md)
 └── README.md                     # This file
 ```
+
+---
+
+## Promote to Turborepo Monorepo
+
+Guide for converting a `project-scaffold` instance into a Turborepo monorepo with pnpm workspaces.
+
+### Prerequisites
+
+- Node >= 22.17.0
+- pnpm >= 10.13.1
+- A project scaffolded from `project-scaffold`
+
+### Steps
+
+#### 1. Install Turbo
+
+```bash
+pnpm add -D turbo
+```
+
+#### 2. Create `pnpm-workspace.yaml`
+
+```yaml
+packages:
+  - 'apps/*'
+  - 'packages/*'
+```
+
+#### 3. Create `turbo.json`
+
+```jsonc
+{
+  "$schema": "https://turbo.build/schema.json",
+  "tasks": {
+    "build": {
+      "dependsOn": ["^build"],
+      "outputs": ["dist/**"]
+    },
+    "check": {
+      "dependsOn": ["^build"]
+    },
+    "check:fix": {
+      "dependsOn": ["^build"]
+    },
+    "dev": {
+      "cache": false,
+      "persistent": true,
+      "dependsOn": ["^build"]
+    },
+    "test": {
+      "dependsOn": ["build"],
+      "outputs": []
+    },
+    "lint": {
+      "dependsOn": ["^build"]
+    },
+    "lint:fix": {
+      "dependsOn": ["^build"]
+    },
+    "format": {
+      "dependsOn": ["^build"]
+    },
+    "format:fix": {
+      "dependsOn": ["^build"]
+    },
+    "type-check": {
+      "dependsOn": ["^build"]
+    },
+    "clean": {
+      "cache": false
+    }
+  }
+}
+```
+
+#### 4. Create workspace directories
+
+```bash
+mkdir -p apps packages
+touch apps/.gitkeep packages/.gitkeep
+```
+
+#### 5. Update root `package.json`
+
+Rename the package and replace scripts with turbo-delegated versions.
+
+**Before:**
+
+```json
+{
+  "name": "project-scaffold",
+  "scripts": {
+    "build": "tsc && tsc-alias",
+    "clean": "rm -rf dist",
+    "format": "biome format .",
+    "format:fix": "biome format --write .",
+    "lint": "biome lint .",
+    "lint:fix": "biome lint --write .",
+    "test": "echo \"No tests configured\" && exit 0",
+    "type-check": "tsc --noEmit"
+  }
+}
+```
+
+**After:**
+
+```json
+{
+  "name": "your-project-name",
+  "scripts": {
+    "build": "turbo run build",
+    "check": "turbo run check",
+    "check:fix": "turbo run check:fix",
+    "clean": "turbo run clean",
+    "dev": "turbo run dev",
+    "format": "turbo run format",
+    "format:fix": "turbo run format:fix",
+    "lint": "turbo run lint",
+    "lint:fix": "turbo run lint:fix",
+    "test": "turbo run test",
+    "type-check": "turbo run type-check"
+  }
+}
+```
+
+Keep these scripts unchanged (they are root-level tooling, not per-package):
+
+- `hooks`, `hooks:disable-all`, `hooks:enable-all`, `hooks:status`
+- `prepare`
+
+#### 6. Update root `tsconfig.json`
+
+Convert to a **base config** that workspace packages will extend. Remove single-package fields:
+
+- Remove `outDir` and `rootDir`
+- Remove `declaration` and `declarationMap`
+- Remove `include`
+
+Keep everything else (`compilerOptions` strictness, `tsc-alias`, `exclude`).
+
+Each workspace package will extend the root config:
+
+```json
+{
+  "extends": "../../tsconfig.json",
+  "compilerOptions": {
+    "outDir": "dist",
+    "rootDir": "src",
+    "declaration": true,
+    "declarationMap": true
+  },
+  "include": ["src/**/*"]
+}
+```
+
+#### 7. Update `.gitignore`
+
+Add the Turborepo cache directory:
+
+```gitignore
+# turborepo
+.turbo/
+```
+
+#### 8. Update `biome.json`
+
+Add the `assist` block for import organization:
+
+```json
+{
+  "assist": {
+    "enabled": true,
+    "actions": {
+      "source": {
+        "organizeImports": "on"
+      }
+    }
+  }
+}
+```
+
+#### 9. Remove scaffold boilerplate
+
+```bash
+rm -rf src/ dist/
+```
+
+These only exist as placeholder content from the scaffold. Actual source code will live inside `apps/` and `packages/`.
+
+#### 10. Reinstall dependencies
+
+```bash
+rm -rf node_modules pnpm-lock.yaml
+pnpm install
+```
+
+### Verification
+
+After completing the steps:
+
+- `pnpm turbo build` runs without errors (no packages yet, so no-op)
+- `pnpm turbo lint` runs without errors
+- Git hooks still work (commit, lint-staged, commitlint)
+- `pnpm-workspace.yaml` exists and points to `apps/*` and `packages/*`
+
+### Adding workspace packages
+
+Once the monorepo is set up, add packages under `apps/` or `packages/`:
+
+```
+apps/       # deployable applications (servers, CLIs)
+packages/   # shared libraries, adapters, types
+```
+
+Each package needs at minimum:
+
+- `package.json` with a unique `name` and its own `scripts`
+- `tsconfig.json` extending `../../tsconfig.json`
+- `src/` directory
 
 ---
 
