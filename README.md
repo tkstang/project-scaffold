@@ -48,20 +48,21 @@ pnpm build
 
 ### Core Tooling
 
-| Tool | Version | Purpose |
-|------|---------|---------|
-| **TypeScript** | 5.8.3 | Type-safe JavaScript with modern ES2022 target |
-| **Biome** | 2.3.11 | Fast linting and formatting (replaces ESLint + Prettier) |
-| **tsx** | 4.21.0 | Direct TypeScript execution without compilation |
-| **tsc-alias** | 1.8.10 | Path alias resolution in compiled output |
-| **CommitLint** | 19.8.1 | Conventional commit message enforcement |
-| **lint-staged** | 15.2.11 | Run linters on staged files only |
+| Tool            | Version | Purpose                                         |
+| --------------- | ------- | ----------------------------------------------- |
+| **TypeScript**  | 5.8.3   | Type-safe JavaScript with modern ES2022 target  |
+| **oxlint**      | 1.51.0  | Fast linting                                    |
+| **oxfmt**       | 0.36.0  | Fast formatting                                 |
+| **tsx**         | 4.21.0  | Direct TypeScript execution without compilation |
+| **tsc-alias**   | 1.8.10  | Path alias resolution in compiled output        |
+| **CommitLint**  | 19.8.1  | Conventional commit message enforcement         |
+| **lint-staged** | 15.2.11 | Run linters on staged files only                |
 
 ### Pre-configured Features
 
 - **Git Hooks**: Pre-commit linting, commit message validation, pre-push checks
 - **CI Workflow**: GitHub Actions for lint, type-check, and build on PRs
-- **Editor Config**: VSCode settings with Biome as default formatter
+- **Editor Config**: VSCode settings with oxc as default formatter
 - **AI Assistants**: Open Agent Toolkit (OAT) with Claude, Cursor, and Codex provider sync
 - **Project Tracking**: OAT project lifecycle for structured multi-session development
 
@@ -94,12 +95,15 @@ This file provides context to Claude Code. Update it to describe your project:
 This file provides guidance to Claude Code when working with this repository.
 
 ## Project Overview
+
 <!-- Describe what your project does -->
 
 ## Development Commands
+
 <!-- List your main commands -->
 
 ## Architecture
+
 <!-- Describe your project structure and key decisions -->
 ```
 
@@ -183,22 +187,32 @@ npx tsx watch src/index.ts     # Run with hot reload
 
 ## Configuration Files
 
-### biome.json - Linting & Formatting
+### .oxlintrc.json - Linting
 
-Biome handles both linting and formatting in a single tool.
+oxlint provides fast linting with ESLint-compatible rules.
 
 **Key Settings:**
-- 2-space indentation, single quotes, trailing commas
-- 80 character line width
-- Strict linting rules with test file exceptions
+
+- Categories-based config (`correctness` + `suspicious` enable ~260 rules)
+- TypeScript plugin for TS-specific rules
+- Test file exceptions (e.g., `no-explicit-any` allowed in test files)
 - Auto-fix on save (via VSCode settings)
 
-**Test File Exceptions:**
-Files matching `*.test.ts` or `*.spec.ts` have relaxed rules (e.g., `noExplicitAny` allowed).
+### .oxfmtrc.json - Formatting
+
+oxfmt provides fast code formatting.
+
+**Key Settings:**
+
+- 2-space indentation, single quotes, trailing commas
+- 80 character line width
+- Automatic import sorting
+- Consistent formatting across TypeScript, JSON, and Markdown
 
 ### tsconfig.json - TypeScript
 
 **Compiler Options:**
+
 - ES2022 target with ESNext modules
 - Bundler module resolution
 - Strict mode with additional checks:
@@ -208,11 +222,13 @@ Files matching `*.test.ts` or `*.spec.ts` have relaxed rules (e.g., `noExplicitA
   - `verbatimModuleSyntax` - Explicit import/export types
 
 **Output:**
+
 - Compiles to `dist/`
 - Generates `.d.ts` declaration files
 - Incremental compilation enabled
 
 **tsc-alias Integration:**
+
 ```json
 {
   "tsc-alias": {
@@ -243,9 +259,9 @@ Runs on staged files before each commit:
 
 ```javascript
 export default {
-  "*.{ts,tsx,js,jsx}": ["biome check --write --no-errors-on-unmatched"],
-  "*.json": ["biome format --write --no-errors-on-unmatched"],
-  "*.md": ["biome format --write --no-errors-on-unmatched"],
+  '*.{ts,tsx,js,jsx}': ['oxlint --fix', 'oxfmt --write'],
+  '*.json': ['oxfmt --write'],
+  '*.md': ['oxfmt --write'],
 };
 ```
 
@@ -265,12 +281,12 @@ Located in `tools/git-hooks/`, this system provides automated code quality check
 
 ### Available Hooks
 
-| Hook | Trigger | Action |
-|------|---------|--------|
-| **pre-commit** | Before commit | Runs lint-staged on staged files |
-| **commit-msg** | After writing commit message | Validates conventional commit format |
-| **pre-push** | Before push | Runs full lint suite |
-| **post-checkout** | After branch switch | Auto-installs dependencies if lockfile changed |
+| Hook              | Trigger                      | Action                                         |
+| ----------------- | ---------------------------- | ---------------------------------------------- |
+| **pre-commit**    | Before commit                | Runs lint-staged on staged files               |
+| **commit-msg**    | After writing commit message | Validates conventional commit format           |
+| **pre-push**      | Before push                  | Runs full lint suite                           |
+| **post-checkout** | After branch switch          | Auto-installs dependencies if lockfile changed |
 
 ### Automatic Installation
 
@@ -279,16 +295,19 @@ Hooks are automatically installed when you run `pnpm install` via the `prepare` 
 ### Disabling Hooks
 
 **Temporarily (single command):**
+
 ```bash
 git commit --no-verify -m "skip hooks"
 ```
 
 **For CI/Docker environments:**
+
 ```bash
 GIT_HOOKS=0 pnpm install
 ```
 
 **Disable specific hook:**
+
 ```bash
 pnpm hooks disable pre-push
 ```
@@ -296,6 +315,7 @@ pnpm hooks disable pre-push
 ### How It Works
 
 The `manage-hooks.js` script creates symlinks from `.git/hooks/` to `tools/git-hooks/`. This approach:
+
 - Keeps hooks in version control
 - Allows easy enable/disable without deleting files
 - Tracks intentionally disabled hooks in `.git/hooks/.disabled-hooks`
@@ -316,13 +336,13 @@ This scaffold uses **Open Agent Toolkit (OAT)** for AI assistant integration acr
 
 OAT provides structured skills for multi-session development:
 
-| Skill | Purpose |
-|-------|---------|
-| `oat-project-new` | Start a new project with discovery/planning phases |
-| `oat-project-quick-start` | Quick-start a project with minimal setup |
-| `oat-project-open` | Resume an existing project |
-| `oat-project-progress` | Check project progress and status |
-| `oat-project-pr-final` | Generate a comprehensive PR description |
+| Skill                     | Purpose                                            |
+| ------------------------- | -------------------------------------------------- |
+| `oat-project-new`         | Start a new project with discovery/planning phases |
+| `oat-project-quick-start` | Quick-start a project with minimal setup           |
+| `oat-project-open`        | Resume an existing project                         |
+| `oat-project-progress`    | Check project progress and status                  |
+| `oat-project-pr-final`    | Generate a comprehensive PR description            |
 
 Projects are stored in `.oat/projects/` with structured artifacts.
 
@@ -338,10 +358,7 @@ Configure them in `.oat/config.json`:
 ```json
 {
   "version": 1,
-  "localPaths": [
-    ".oat/ideas",
-    ".oat/projects/**/reviews"
-  ]
+  "localPaths": [".oat/ideas", ".oat/projects/**/reviews"]
 }
 ```
 
@@ -395,6 +412,7 @@ jobs:
 ```
 
 **Triggers:**
+
 - Push to `main` branch
 - Pull requests targeting `main`
 
@@ -404,17 +422,21 @@ jobs:
 
 ```markdown
 ## Purpose
+
 <!-- Brief description -->
 
 ## Changes
+
 - [ ] Change 1
 - [ ] Change 2
 
 ## Testing
+
 - [ ] Unit tests
 - [ ] Manual testing
 
 ## Notes
+
 <!-- Additional context -->
 ```
 
@@ -448,7 +470,8 @@ jobs:
 │   └── PULL_REQUEST_TEMPLATE.md
 ├── .vscode/
 │   └── settings.json             # Editor config
-├── biome.json                    # Linting & formatting
+├── .oxlintrc.json                # Linting config
+├── .oxfmtrc.json                 # Formatting config
 ├── tsconfig.json                 # TypeScript config
 ├── commitlint.config.js          # Commit message rules
 ├── .lintstagedrc.mjs             # Pre-commit checks
@@ -496,42 +519,42 @@ packages:
   "tasks": {
     "build": {
       "dependsOn": ["^build"],
-      "outputs": ["dist/**"]
+      "outputs": ["dist/**"],
     },
     "check": {
-      "dependsOn": ["^build"]
+      "dependsOn": ["^build"],
     },
     "check:fix": {
-      "dependsOn": ["^build"]
+      "dependsOn": ["^build"],
     },
     "dev": {
       "cache": false,
       "persistent": true,
-      "dependsOn": ["^build"]
+      "dependsOn": ["^build"],
     },
     "test": {
       "dependsOn": ["build"],
-      "outputs": []
+      "outputs": [],
     },
     "lint": {
-      "dependsOn": ["^build"]
+      "dependsOn": ["^build"],
     },
     "lint:fix": {
-      "dependsOn": ["^build"]
+      "dependsOn": ["^build"],
     },
     "format": {
-      "dependsOn": ["^build"]
+      "dependsOn": ["^build"],
     },
     "format:fix": {
-      "dependsOn": ["^build"]
+      "dependsOn": ["^build"],
     },
     "type-check": {
-      "dependsOn": ["^build"]
+      "dependsOn": ["^build"],
     },
     "clean": {
-      "cache": false
-    }
-  }
+      "cache": false,
+    },
+  },
 }
 ```
 
@@ -554,10 +577,10 @@ Rename the package and replace scripts with turbo-delegated versions.
   "scripts": {
     "build": "tsc && tsc-alias",
     "clean": "rm -rf dist",
-    "format": "biome format .",
-    "format:fix": "biome format --write .",
-    "lint": "biome lint .",
-    "lint:fix": "biome lint --write .",
+    "format": "oxfmt --check .",
+    "format:fix": "oxfmt --write .",
+    "lint": "oxlint .",
+    "lint:fix": "oxlint --fix .",
     "test": "echo \"No tests configured\" && exit 0",
     "type-check": "tsc --noEmit"
   }
@@ -624,24 +647,7 @@ Add the Turborepo cache directory:
 .turbo/
 ```
 
-#### 8. Update `biome.json`
-
-Add the `assist` block for import organization:
-
-```json
-{
-  "assist": {
-    "enabled": true,
-    "actions": {
-      "source": {
-        "organizeImports": "on"
-      }
-    }
-  }
-}
-```
-
-#### 9. Remove scaffold boilerplate
+#### 8. Remove scaffold boilerplate
 
 ```bash
 rm -rf src/ dist/
@@ -649,7 +655,7 @@ rm -rf src/ dist/
 
 These only exist as placeholder content from the scaffold. Actual source code will live inside `apps/` and `packages/`.
 
-#### 10. Reinstall dependencies
+#### 9. Reinstall dependencies
 
 ```bash
 rm -rf node_modules pnpm-lock.yaml
@@ -694,11 +700,12 @@ pnpm hooks:status
 pnpm hooks:enable-all
 ```
 
-### Biome not formatting on save
+### oxc not formatting on save
 
-Ensure you have the Biome VSCode extension installed:
+Ensure you have the oxc VSCode extension installed:
+
 ```bash
-code --install-extension biomejs.biome
+code --install-extension oxc.oxc-vscode
 ```
 
 ### TypeScript path aliases not resolving
@@ -708,6 +715,7 @@ Make sure you're running `pnpm build` (not just `tsc`) to include the `tsc-alias
 ### Dependencies out of sync after branch switch
 
 The `post-checkout` hook should auto-install, but if not:
+
 ```bash
 pnpm install --frozen-lockfile
 ```

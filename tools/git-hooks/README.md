@@ -107,4 +107,3 @@ Ensure `GIT_HOOKS=0` is set in your CI environment or Dockerfile.
 - Disabled hooks are tracked in `.git/hooks/.disabled-hooks`
 - The `setup` action respects intentionally disabled hooks
 - Git's `core.hooksPath` is unset to ensure hooks run from `.git/hooks/`
-

@@ -15,15 +15,17 @@
 ## Development Commands
 
 ### Essential Commands
+
 - `pnpm build` - Build the project
-- `pnpm lint` - Lint code using Biome
-- `pnpm format` - Format code using Biome
+- `pnpm lint` - Lint code using oxlint
+- `pnpm format` - Format code using oxfmt
 - `pnpm type-check` - TypeScript type checking
 - `pnpm test` - Run tests
 
 ### Code Quality
+
 - Commit messages follow Conventional Commits format
-- Pre-commit hooks run lint-staged (Biome check on staged files)
+- Pre-commit hooks run lint-staged (oxlint + oxfmt on staged files)
 - Pre-push hooks run full lint suite
 
 ## Agent Workflow
